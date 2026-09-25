@@ -1,12 +1,12 @@
 
 import { useRef, useState } from 'react';
 import {
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 
 const screens = [
@@ -43,11 +43,11 @@ const screens = [
     color: '#c2185b',
   },
   {
-    id: 'perfil',
-    label: 'Perfil',
-    icon: '👤',
-    title: 'Perfil',
-    description: 'Gerencie suas informações pessoais.',
+    id: 'configuracoes',
+    label: 'Configurações',
+    icon: '⚙️',
+    title: 'Configurações',
+    description: 'Ajustes de acessibilidade e preferências.',
     color: '#6d28d9',
   },
 ];
@@ -72,19 +72,67 @@ const emergencyContacts = [
   { id: 'vizinhos', name: 'Vizinhos', phone: '(11) 98888-7788', icon: '🏡' },
 ];
 
+const accessibilityOptions = [
+  { title: 'Texto maior', description: 'Aumenta a legibilidade dos textos.', icon: '🔤' },
+  { title: 'Contraste alto', description: 'Melhora a distinção visual dos elementos.', icon: '◐' },
+  { title: 'Linguagem simples', description: 'Simplifica instruções e avisos.', icon: '💬' },
+  { title: 'Áudio de apoio', description: 'Lê lembretes e dicas em voz alta.', icon: '🔊' },
+];
+
 export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [medicineList, setMedicineList] = useState(initialReminders);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const { width } = useWindowDimensions();
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const [headerTranslateY] = useState(() => new Animated.Value(0));
+  const [headerOpacity] = useState(() => new Animated.Value(1));
+  const lastScrollY = useRef(0);
+  const headerHeight = 116;
 
   const goToScreen = (index: number) => {
     setActiveIndex(index);
-    scrollViewRef.current?.scrollTo({
-      x: index * width,
-      y: 0,
-      animated: true,
-    });
+    lastScrollY.current = 0;
+  };
+
+  const handlePageScroll = (offsetY: number) => {
+    const delta = offsetY - lastScrollY.current;
+
+    if (Math.abs(delta) < 6) {
+      return;
+    }
+
+    if (delta > 0 && offsetY > 8 && headerVisible) {
+      setHeaderVisible(false);
+      Animated.parallel([
+        Animated.spring(headerTranslateY, {
+          toValue: -headerHeight,
+          useNativeDriver: true,
+          tension: 40,
+          friction: 12,
+        }),
+        Animated.timing(headerOpacity, {
+          toValue: 0,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (delta < 0 && !headerVisible) {
+      setHeaderVisible(true);
+      Animated.parallel([
+        Animated.spring(headerTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 40,
+          friction: 12,
+        }),
+        Animated.timing(headerOpacity, {
+          toValue: 1,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+
+    lastScrollY.current = offsetY;
   };
 
   const toggleMedicine = (id: string) => {
@@ -95,118 +143,197 @@ export default function App() {
     );
   };
 
+  const screen = screens[activeIndex];
+
+  const renderScreenContent = () => {
+    if (screen.id === 'agenda') {
+      return (
+        <View style={styles.medicinePanel}>
+          <Text style={styles.panelHeader}>Remédios de hoje</Text>
+          <Text style={styles.panelSubtitle}>Próximo lembrete: 20:00</Text>
+
+          <View style={styles.medicineList}>
+            {medicineList.map((medicine) => (
+              <Pressable
+                key={medicine.id}
+                onPress={() => toggleMedicine(medicine.id)}
+                style={[styles.medicineItem, medicine.taken && styles.medicineItemTaken]}
+              >
+                <View style={styles.medicineInfo}>
+                  <Text style={styles.medicineName}>{medicine.name}</Text>
+                  <Text style={styles.medicineDose}>{medicine.dose}</Text>
+                  <Text style={styles.medicineTime}>Horário: {medicine.time}</Text>
+                </View>
+
+                <Text
+                  style={[
+                    styles.statusBadge,
+                    medicine.taken ? styles.statusTaken : styles.statusPending,
+                  ]}
+                >
+                  {medicine.taken ? 'Tomado' : 'Pendente'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (screen.id === 'saude') {
+      return (
+        <View style={styles.healthPanel}>
+          <Text style={styles.panelHeader}>Monitoramento da saúde</Text>
+          <Text style={styles.panelSubtitle}>Resumo do dia</Text>
+
+          <View style={styles.metricsGrid}>
+            {healthMetrics.map((metric) => (
+              <View key={metric.label} style={styles.metricCard}>
+                <Text style={styles.metricLabel}>{metric.label}</Text>
+                <Text style={styles.metricValue}>{metric.value}</Text>
+                <Text style={styles.metricUnit}>{metric.unit}</Text>
+                <Text style={styles.metricStatus}>{metric.status}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.alertBox}>
+            <Text style={styles.alertTitle}>Dica de hoje</Text>
+            <Text style={styles.alertText}>Beba água e faça uma caminhada leve.</Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (screen.id === 'contatos') {
+      return (
+        <View style={styles.contactsPanel}>
+          <Text style={styles.panelHeader}>Contatos de emergência</Text>
+          <Text style={styles.panelSubtitle}>Toque para ligar</Text>
+
+          <View style={styles.contactsList}>
+            {emergencyContacts.map((contact) => (
+              <Pressable key={contact.id} style={styles.contactCard}>
+                <Text style={styles.contactIcon}>{contact.icon}</Text>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactName}>{contact.name}</Text>
+                  <Text style={styles.contactPhone}>{contact.phone}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (screen.id === 'configuracoes') {
+      return (
+        <View style={styles.settingsPanel}>
+          <Text style={styles.panelHeader}>Configurações</Text>
+          <Text style={styles.panelSubtitle}>Acessibilidade</Text>
+
+          <View style={styles.settingsList}>
+            {accessibilityOptions.map((option) => (
+              <View key={option.title} style={styles.settingCard}>
+                <Text style={styles.settingIcon}>{option.icon}</Text>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>{option.title}</Text>
+                  <Text style={styles.settingDescription}>{option.description}</Text>
+                </View>
+                <Text style={styles.settingToggle}>ON</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.homeSummaryPanel}>
+        <Text style={styles.panelHeader}>Resumo do dia</Text>
+        <Text style={styles.panelSubtitle}>Tudo em um lugar</Text>
+
+        <View style={styles.summaryGrid}>
+          <View style={[styles.summaryCard, styles.summaryCardMedicine]}>
+            <Text style={styles.summaryEmoji}>💊</Text>
+            <Text style={styles.summaryLabel}>Remédios</Text>
+            <Text style={styles.summaryValue}>2 pendentes</Text>
+          </View>
+
+          <View style={[styles.summaryCard, styles.summaryCardHealth]}>
+            <Text style={styles.summaryEmoji}>❤️</Text>
+            <Text style={styles.summaryLabel}>Saúde</Text>
+            <Text style={styles.summaryValue}>Pressão normal</Text>
+          </View>
+
+          <View style={[styles.summaryCard, styles.summaryCardContacts]}>
+            <Text style={styles.summaryEmoji}>📞</Text>
+            <Text style={styles.summaryLabel}>Contatos</Text>
+            <Text style={styles.summaryValue}>4 contatos</Text>
+          </View>
+
+          <View style={[styles.summaryCard, styles.summaryCardSettings]}>
+            <Text style={styles.summaryEmoji}>⚙️</Text>
+            <Text style={styles.summaryLabel}>Acessibilidade</Text>
+            <Text style={styles.summaryValue}>4 ajustes ativos</Text>
+          </View>
+        </View>
+
+        <View style={styles.summaryAlert}>
+          <Text style={styles.summaryAlertTitle}>Próximo lembrete</Text>
+          <Text style={styles.summaryAlertText}>Vitamina D às 12:30</Text>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(event) => {
-          const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
-          setActiveIndex(nextIndex);
-        }}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
       >
-        {screens.map((screen) => (
-          <View key={screen.id} style={[styles.page, { width }]}>
-            {screen.id === 'agenda' ? (
-              <View style={styles.medicinePanel}>
-                <Text style={styles.panelHeader}>Remédios de hoje</Text>
-                <Text style={styles.panelSubtitle}>Próximo lembrete: 20:00</Text>
+        <View style={styles.logoBubble}>
+          <Text style={styles.logoHeart}>♥</Text>
+        </View>
+        <Text style={styles.brand}>
+          cuidar
+          <Text style={styles.brandAccent}>+</Text>
+        </Text>
+      </Animated.View>
 
-                <View style={styles.medicineList}>
-                  {medicineList.map((medicine) => (
-                    <Pressable
-                      key={medicine.id}
-                      onPress={() => toggleMedicine(medicine.id)}
-                      style={[
-                        styles.medicineItem,
-                        medicine.taken && styles.medicineItemTaken,
-                      ]}
-                    >
-                      <View style={styles.medicineInfo}>
-                        <Text style={styles.medicineName}>{medicine.name}</Text>
-                        <Text style={styles.medicineDose}>{medicine.dose}</Text>
-                        <Text style={styles.medicineTime}>Horário: {medicine.time}</Text>
-                      </View>
-
-                      <Text
-                        style={[
-                          styles.statusBadge,
-                          medicine.taken ? styles.statusTaken : styles.statusPending,
-                        ]}
-                      >
-                        {medicine.taken ? 'Tomado' : 'Pendente'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : screen.id === 'saude' ? (
-              <View style={styles.healthPanel}>
-                <Text style={styles.panelHeader}>Monitoramento da saúde</Text>
-                <Text style={styles.panelSubtitle}>Resumo do dia</Text>
-
-                <View style={styles.metricsGrid}>
-                  {healthMetrics.map((metric) => (
-                    <View key={metric.label} style={styles.metricCard}>
-                      <Text style={styles.metricLabel}>{metric.label}</Text>
-                      <Text style={styles.metricValue}>{metric.value}</Text>
-                      <Text style={styles.metricUnit}>{metric.unit}</Text>
-                      <Text style={styles.metricStatus}>{metric.status}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.alertBox}>
-                  <Text style={styles.alertTitle}>Dica de hoje</Text>
-                  <Text style={styles.alertText}>Beba água e faça uma caminhada leve.</Text>
-                </View>
-              </View>
-            ) : screen.id === 'contatos' ? (
-              <View style={styles.contactsPanel}>
-                <Text style={styles.panelHeader}>Contatos de emergência</Text>
-                <Text style={styles.panelSubtitle}>Toque para ligar</Text>
-
-                <View style={styles.contactsList}>
-                  {emergencyContacts.map((contact) => (
-                    <Pressable key={contact.id} style={styles.contactCard}>
-                      <Text style={styles.contactIcon}>{contact.icon}</Text>
-                      <View style={styles.contactInfo}>
-                        <Text style={styles.contactName}>{contact.name}</Text>
-                        <Text style={styles.contactPhone}>{contact.phone}</Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <View style={[styles.card, { borderColor: screen.color }]}>
-                <Text style={[styles.badge, { backgroundColor: screen.color }]}>
-                  {screen.label}
-                </Text>
-                <Text style={styles.title}>{screen.title}</Text>
-                <Text style={styles.description}>{screen.description}</Text>
-              </View>
-            )}
-          </View>
-        ))}
-      </ScrollView>
+      <View style={styles.contentWrapper}>
+        <ScrollView
+          key={screen.id}
+          style={styles.pageScroll}
+          contentContainerStyle={styles.pageScrollContent}
+          showsVerticalScrollIndicator={false}
+          onScroll={({ nativeEvent }) => handlePageScroll(nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
+        >
+          {renderScreenContent()}
+        </ScrollView>
+      </View>
 
       <View style={styles.bottomNav}>
-        {screens.map((screen, index) => {
+        {screens.map((item, index) => {
           const isActive = activeIndex === index;
 
           return (
             <Pressable
-              key={screen.id}
+              key={item.id}
               onPress={() => goToScreen(index)}
               style={[styles.navButton, isActive && styles.navButtonActive]}
             >
               <View style={styles.navButtonContent}>
-                <Text style={styles.navIcon}>{screen.icon}</Text>
+                <Text style={styles.navIcon}>{item.icon}</Text>
                 <Text style={[styles.navButtonText, isActive && styles.navButtonTextActive]}>
-                  {screen.label}
+                  {item.label}
                 </Text>
               </View>
             </Pressable>
@@ -222,11 +349,73 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f1e8',
   },
-  page: {
-    justifyContent: 'center',
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 116,
+    paddingTop: 58,
+    paddingBottom: 22,
+    paddingHorizontal: 20,
+    backgroundColor: '#fffdf9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e7dcc7',
+    overflow: 'hidden',
+  },
+  contentWrapper: {
+    flex: 1,
+    paddingTop: 116,
+    paddingBottom: 18,
+  },
+  logoBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#fef2f2',
+    borderWidth: 2,
+    borderColor: '#f4b1b1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  logoHeart: {
+    fontSize: 20,
+    color: '#d32f2f',
+  },
+  brand: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#163a50',
+    letterSpacing: -1,
+  },
+  brandAccent: {
+    color: '#2cb67d',
+  },
+  carousel: {
+    flex: 1,
+  },
+  carouselContent: {
+    paddingBottom: 16,
+  },
+  pageScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  pageScrollContent: {
     paddingHorizontal: 22,
-    paddingVertical: 28,
+    paddingTop: 14,
+    paddingBottom: 32,
+    alignItems: 'center',
   },
   card: {
     width: '100%',
@@ -289,6 +478,127 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
+  },
+  homeSummaryPanel: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: '#edf6ff',
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: '#2563eb',
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  summaryCard: {
+    width: '47%',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 2,
+  },
+  summaryCardMedicine: {
+    borderColor: '#14b8a6',
+  },
+  summaryCardHealth: {
+    borderColor: '#f59e0b',
+  },
+  summaryCardContacts: {
+    borderColor: '#ec4899',
+  },
+  summaryCardSettings: {
+    borderColor: '#8b5cf6',
+  },
+  summaryEmoji: {
+    fontSize: 26,
+    marginBottom: 10,
+  },
+  summaryLabel: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  summaryAlert: {
+    marginTop: 18,
+    backgroundColor: '#fff7ed',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#fdba74',
+    padding: 16,
+  },
+  summaryAlertTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#9a4d00',
+    marginBottom: 4,
+  },
+  summaryAlertText: {
+    fontSize: 18,
+    color: '#7c2d12',
+  },
+  settingsPanel: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: '#f5f3ff',
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: '#6d28d9',
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  settingsList: {
+    gap: 12,
+  },
+  settingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#ddd6fe',
+    padding: 16,
+  },
+  settingIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  settingInfo: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 15,
+    color: '#4b5563',
+    lineHeight: 20,
+  },
+  settingToggle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#6d28d9',
+    marginLeft: 8,
   },
   panelHeader: {
     fontSize: 32,

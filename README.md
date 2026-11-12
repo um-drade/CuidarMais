@@ -30,7 +30,3 @@ src/
 ├── utils/              # greeting, medicines (períodos, contagem regressiva)
 └── types/              # tipos compartilhados
 ```
-
-## Login
-
-`src/services/auth.ts` é um espaço reservado: não há servidor nem armazenamento, e a sessão se perde ao fechar o app. Qualquer e-mail válido com senha de 6+ caracteres entra. Substitua `signIn` e `signUp` por uma implementação real antes de usar com dados reais.

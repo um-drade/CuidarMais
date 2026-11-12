@@ -1,6 +1,6 @@
 # Cuidar+
 
-App mobile (Expo / React Native) de apoio ao cuidado diário: remédios, saúde, contatos de emergência e perfil. Visual baseado na prévia do novo design (tema claro e escuro automáticos).
+App mobile (Expo / React Native) de apoio ao cuidado diário: remédios, saúde, contatos de emergência e perfil.
 
 ## Como rodar
 

@@ -1,56 +1,36 @@
-# Welcome to your Expo app 👋
+# Cuidar+
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App mobile (Expo / React Native) de apoio ao cuidado diário: remédios, saúde, contatos de emergência e perfil. Visual baseado na prévia do novo design (tema claro e escuro automáticos).
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Como rodar
 
 ```bash
-npm run reset-project
+npm install
+npx expo install react-native-svg   # ícones do novo design (obrigatório, só na primeira vez)
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Estrutura do código
 
-### Other setup steps
+```
+src/
+├── app/                # Rotas (Expo Router)
+│   ├── _layout.tsx     # Tema + AuthProvider
+│   ├── login.tsx       # Rota de login
+│   └── index.tsx       # App principal (abas); redireciona para /login sem sessão
+├── screens/            # login, home, medicines, health, contacts, profile
+├── components/
+│   ├── layout/         # tab-bar, emergency-button, screen-scroll
+│   └── ui/             # card, app-button, badge, switch, text-field, icon, icon-box
+├── contexts/           # auth-context (sessão do usuário)
+├── services/           # auth.ts (autenticação PROVISÓRIA, veja abaixo)
+├── theme/              # palette (cores claro/escuro), typography
+├── hooks/              # use-app-theme
+├── data/               # dados de exemplo
+├── utils/              # greeting, medicines (períodos, contagem regressiva)
+└── types/              # tipos compartilhados
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Login
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+`src/services/auth.ts` é um espaço reservado: não há servidor nem armazenamento, e a sessão se perde ao fechar o app. Qualquer e-mail válido com senha de 6+ caracteres entra. Substitua `signIn` e `signUp` por uma implementação real antes de usar com dados reais.
